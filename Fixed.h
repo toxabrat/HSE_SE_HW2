@@ -9,13 +9,13 @@ struct Fixed {
     using v_type = std::conditional_t<
         fast,
         std::conditional_t<
-            N <= 8,  int_fast8_t,
+            N < 8,  int_fast8_t,
             std::conditional_t<
-                N <= 16, int_fast16_t,
+                N < 16, int_fast16_t,
                 std::conditional_t<
-                    N <= 32, int_fast32_t,
+                    N < 32, int_fast32_t,
                     std::conditional_t<
-                        N <= 64, int_fast64_t,
+                        N < 64, int_fast64_t,
                         void 
                     >
                 >
@@ -68,6 +68,11 @@ struct Fixed {
 
     operator double() const { return static_cast<double>(v) / (1LL << K); }
 
+    constexpr Fixed(const Fixed& other) = default;
+    constexpr Fixed(Fixed&& other) noexcept = default;
+    Fixed& operator=(const Fixed& other) = default;
+    Fixed& operator=(Fixed&& other) noexcept = default;
+
     auto operator<=>(const Fixed& other) const {
         return v <=> other.v;
     }
@@ -84,6 +89,14 @@ struct Fixed {
     template <typename T>
     bool operator==(const T& other) const {
         return static_cast<double>(*this) == static_cast<double>(other);
+    }
+
+    static std::string get_name() {
+        if constexpr (fast) {
+            return "FAST_FIXED(" + std::to_string(N) + ", " + std::to_string(K) + ")";
+        } else {
+            return "FIXED(" + std::to_string(N) + ", " + std::to_string(K) + ")";
+        }
     }
 };
 
@@ -185,3 +198,17 @@ template<size_t N, size_t K, bool fast>
 std::ostream& operator<<(std::ostream& out, Fixed<N, K, fast> x) {
     return out << static_cast<double>(x);
 }
+
+
+template <class T>
+auto getName() {
+    if constexpr (std::is_same_v<T, float>) {
+        return "FLOAT";
+    } else if constexpr (std::is_same_v<T, double>) {
+        return "DOUBLE";
+    } else if constexpr (std::is_class_v<T> && std::is_invocable_v<decltype(&T::get_name)>) {
+        return T::get_name();
+    } 
+    throw std::runtime_error("Unknown type");
+}
+
